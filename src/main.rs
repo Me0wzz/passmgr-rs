@@ -1,24 +1,11 @@
-mod crypto;
-mod generator;
-mod model;
-mod test;
-mod vault;
+use passmgr_rs::{generator, model::PasswordEntry, vault::Vault};
 
-use std::{
-    io::{self, Read, Write},
-    path::Path,
-};
+use std::path::Path;
 
 use anyhow::{Result, anyhow, bail};
-use clap::{Command, Parser, Subcommand};
+use clap::{Parser, Subcommand};
 use dialoguer::Input;
-use model::PasswordEntry;
 use zeroize::Zeroizing;
-
-use crate::{
-    test::{test_storage, test_vault},
-    vault::Vault,
-};
 
 const VAULT_PATH: &str = "vault.enc";
 

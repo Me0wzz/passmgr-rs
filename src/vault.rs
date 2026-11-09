@@ -1,7 +1,8 @@
-use std::{error::Error, fs, path::Path};
+use std::{fs, io::Write, path::Path};
 
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
+use tempfile::NamedTempFile;
 
 use crate::{crypto, model::PasswordEntry};
 
@@ -33,11 +34,19 @@ impl Vault {
         self.entries.retain(|entry| entry.name != name);
         old_len != self.entries.len()
     }
+
     pub fn save_encrypted(&self, path: &Path, password: &str) -> Result<()> {
         let json = serde_json::to_vec(self)?;
         let encrypted = crypto::encrypt(&json, password)?;
+        let parent = path
+            .parent()
+            .filter(|p| !p.as_os_str().is_empty())
+            .unwrap_or_else(|| Path::new("."));
+        let mut temp = NamedTempFile::new_in(parent)?;
 
-        fs::write(path, encrypted).unwrap();
+        temp.write_all(&encrypted)?;
+        temp.as_file().sync_all()?;
+        temp.persist(path)?;
         Ok(())
     }
 
@@ -50,6 +59,7 @@ impl Vault {
     }
 
     // deprecated
+    /*
     pub fn save(&self, path: &Path) -> Result<(), Box<dyn Error>> {
         let json = serde_json::to_string_pretty(self).unwrap();
         fs::write(path, json).unwrap();
@@ -60,4 +70,5 @@ impl Vault {
         let vault = serde_json::from_str(&json)?;
         Ok(vault)
     }
+    */
 }
