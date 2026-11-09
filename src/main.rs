@@ -1,4 +1,5 @@
 mod crypto;
+mod generator;
 mod model;
 mod test;
 mod vault;
@@ -31,10 +32,20 @@ struct Cli {
 #[derive(Subcommand, Debug)]
 enum Commands {
     Init,
-    Add { name: String },
+    Add {
+        name: String,
+    },
     List,
-    Show { name: String },
-    Remove { name: String },
+    Show {
+        name: String,
+    },
+    Remove {
+        name: String,
+    },
+    Generate {
+        #[arg(short, long, default_value_t = 16)]
+        length: usize,
+    },
 }
 
 fn prompt(message: &str) -> Result<String> {
@@ -115,6 +126,13 @@ fn main() -> Result<()> {
             } else {
                 println!("Account not found.");
             }
+        }
+        Commands::Generate { length } => {
+            if !(8..128).contains(&length) {
+                bail!("Password length must be between 8 and 128!");
+            }
+            let password = generator::generate_password(length);
+            println!("Generated password: {password}");
         }
     }
     Ok(())
