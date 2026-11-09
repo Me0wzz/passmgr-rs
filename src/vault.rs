@@ -1,8 +1,9 @@
 use std::{error::Error, fs, path::Path};
 
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
-use crate::model::PasswordEntry;
+use crate::{crypto, model::PasswordEntry};
 
 #[derive(Clone, Default, Serialize, Deserialize)]
 pub struct Vault {
@@ -29,6 +30,23 @@ impl Vault {
         self.entries.retain(|entry| entry.name != name);
         old_len != self.entries.len()
     }
+    pub fn save_encrypted(&self, path: &Path, password: &str) -> Result<()> {
+        let json = serde_json::to_vec(self)?;
+        let encrypted = crypto::encrypt(&json, password)?;
+
+        fs::write(path, encrypted).unwrap();
+        Ok(())
+    }
+
+    pub fn load_encrypted(path: &Path, password: &str) -> Result<Self> {
+        let encrypted = fs::read(&path)?;
+        let decrypted = crypto::decrypt(&encrypted, password)?;
+        let vault = serde_json::from_slice(&decrypted)?;
+
+        Ok(vault)
+    }
+
+    // deprecated
     pub fn save(&self, path: &Path) -> Result<(), Box<dyn Error>> {
         let json = serde_json::to_string_pretty(self).unwrap();
         fs::write(path, json).unwrap();
