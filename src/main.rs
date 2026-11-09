@@ -9,8 +9,9 @@ use std::{
     path::Path,
 };
 
-use anyhow::{Result, bail};
+use anyhow::{Result, anyhow, bail};
 use clap::{Command, Parser, Subcommand};
+use dialoguer::Input;
 use model::PasswordEntry;
 use zeroize::Zeroizing;
 
@@ -46,15 +47,17 @@ enum Commands {
         #[arg(short, long, default_value_t = 16)]
         length: usize,
     },
+    Edit {
+        name: String,
+    },
 }
 
 fn prompt(message: &str) -> Result<String> {
-    print!("{message}");
-    io::stdout().flush()?;
-
-    let mut input = String::new();
-    io::stdin().read_line(&mut input)?;
-    Ok(input.trim().to_string())
+    let input = Input::new()
+        .with_prompt(message)
+        .allow_empty(true)
+        .interact_text()?;
+    Ok(input)
 }
 
 fn master_password() -> Result<Zeroizing<String>> {
@@ -133,6 +136,29 @@ fn main() -> Result<()> {
             }
             let password = generator::generate_password(length);
             println!("Generated password: {password}");
+        }
+        Commands::Edit { name } => {
+            let password = master_password()?;
+            let mut vault = Vault::load_encrypted(path, &password)?;
+            let entry = vault
+                .find_mut(&name)
+                .ok_or_else(|| anyhow!("Account not found"))?;
+
+            println!("Current username: {}", entry.username);
+
+            let username = prompt("New username (Enter to keep): ")?;
+            if !username.is_empty() {
+                entry.username = username;
+            }
+            let new_password = Zeroizing::new(rpassword::prompt_password(
+                "New Password (Enter to keep): ",
+            )?);
+            if !new_password.is_empty() {
+                entry.password = new_password.to_string();
+            }
+            vault.save_encrypted(path, &password)?;
+
+            println!("Accout '{name}' updated successfully!");
         }
     }
     Ok(())

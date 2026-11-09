@@ -25,6 +25,9 @@ impl Vault {
     pub fn find(&self, name: &str) -> Option<&PasswordEntry> {
         self.entries.iter().find(|entry| entry.name == name)
     }
+    pub fn find_mut(&mut self, name: &str) -> Option<&mut PasswordEntry> {
+        self.entries.iter_mut().find(|entry| entry.name == name)
+    }
     pub fn remove(&mut self, name: &str) -> bool {
         let old_len = self.entries.len();
         self.entries.retain(|entry| entry.name != name);
